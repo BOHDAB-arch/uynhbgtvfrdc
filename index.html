@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Deadpool Tap</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Bangers&family=Rubik:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07040a; --glass:rgba(30,16,30,.62); --gold1:#ffe29a; --gold2:#e8a64a; --gold3:#8a5a1c;
+  --red:#d3132f; --red2:#ff4a4a; --violet:#8a5cff; --text:#fbf1e4; --muted:#a8968a;
+  --comic:"Bangers",Impact,"Arial Black",sans-serif; --ui:"Rubik",system-ui,-apple-system,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--ui);touch-action:manipulation}
+body{display:flex;flex-direction:column;padding:env(safe-area-inset-top,0) 12px env(safe-area-inset-bottom,0);position:relative;
+  background:
+   radial-gradient(ellipse 80% 50% at 50% 58%,rgba(211,19,47,.38),transparent 70%),
+   radial-gradient(ellipse at 50% 120%,#3b0a14,transparent 60%),
+   radial-gradient(circle at 50% 0,#1b0d22,var(--bg) 70%)}
+/* напівтон як у коміксах */
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.14;
+  background-image:radial-gradient(#ff4a4a 1.2px,transparent 1.6px);background-size:14px 14px;
+  -webkit-mask-image:radial-gradient(ellipse at 50% 55%,#000 0,transparent 70%);mask-image:radial-gradient(ellipse at 50% 55%,#000 0,transparent 70%)}
+canvas#fx{position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.top,.menu,.score,.stage,.energy{position:relative;z-index:2}
+
+/* скляні панелі із золотою фаскою */
+.panel{background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,0) 40%),var(--glass);
+  backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-radius:20px;position:relative;
+  box-shadow:0 8px 22px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.18),inset 0 -2px 6px rgba(0,0,0,.5)}
+.panel::before{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.5px;pointer-events:none;
+  background:linear-gradient(160deg,var(--gold1),var(--gold3) 45%,var(--gold2) 75%,var(--gold1));
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+
+.top{display:flex;gap:10px;margin-top:12px}
+.user{flex:1;min-width:0;display:flex;align-items:center;gap:11px;padding:9px 12px}
+.ava{width:48px;height:48px;border-radius:50%;flex:none;background:#2b1d33 center/cover;display:grid;place-items:center;
+  font:700 20px var(--ui);color:var(--gold1);box-shadow:0 0 0 2px var(--gold2),0 0 0 4px #000,0 0 14px rgba(232,166,74,.6)}
+.uinfo{min-width:0;flex:1}
+.uname{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.uid{font-size:11px;color:var(--muted);margin-top:1px}
+.lvl{height:7px;border-radius:4px;background:#000a;margin-top:6px;overflow:hidden;box-shadow:inset 0 1px 3px #000}
+.lvl i{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(180deg,#fff2c4,var(--gold2) 55%,var(--gold3));box-shadow:0 0 8px var(--gold2);transition:width .25s}
+.gems{display:flex;align-items:center;gap:8px;padding:8px 8px 8px 14px}
+.gems svg{width:24px;height:24px;filter:drop-shadow(0 0 6px #b48cff)}
+.gems b{font-size:19px;min-width:20px;text-align:right}
+.plus{width:36px;height:36px;border:0;border-radius:11px;color:#fff;font-size:24px;font-weight:700;line-height:1;
+  background:linear-gradient(180deg,#b79bff,var(--violet) 50%,#5a2fd6);box-shadow:0 3px 0 #3a1d96,0 6px 14px rgba(138,92,255,.55),inset 0 1px 0 #ffffff80}
+.plus:active{transform:translateY(2px);box-shadow:0 1px 0 #3a1d96}
+
+.menu{display:flex;gap:10px;margin-top:10px}
+.menu button{flex:1;padding:12px 6px;border:0;color:var(--text);font:600 15px var(--ui);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+.menu button:active{transform:scale(.96)}
+.menu .dot{position:absolute;top:8px;right:10px;width:9px;height:9px;border-radius:50%;background:var(--red2);box-shadow:0 0 8px var(--red2);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{transform:scale(1.35);opacity:.6}}
+
+.score{text-align:center;margin-top:12px;line-height:1}
+.score .n{font:400 58px var(--comic);letter-spacing:2px;color:#fff;
+  -webkit-text-stroke:2px #000;paint-order:stroke fill;
+  text-shadow:0 3px 0 var(--red),0 6px 0 #7a0a1b,0 10px 22px rgba(211,19,47,.8)}
+.score .n.bump{animation:bump .12s}
+@keyframes bump{50%{transform:scale(1.07)}}
+.score .l{font-size:12px;color:var(--muted);margin-top:8px;letter-spacing:.5px}
+
+/* ТАПАЛКА */
+.stage{flex:1;min-height:0;display:grid;place-items:center;perspective:700px}
+.rig{position:relative;width:min(76vw,320px);aspect-ratio:1;display:grid;place-items:center;transform-style:preserve-3d;transition:transform .12s ease-out}
+.aura{position:absolute;inset:-18%;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent,rgba(255,74,74,.55),transparent 30%,rgba(255,150,60,.4),transparent 65%,rgba(255,74,74,.5),transparent);
+  filter:blur(22px);animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ring{position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 200deg,#fff1c2,var(--gold2),var(--gold3),var(--gold1),#fff1c2,var(--gold2),var(--gold3),var(--gold1));
+  box-shadow:0 22px 40px rgba(0,0,0,.75),0 0 50px rgba(211,19,47,.55),inset 0 3px 4px #fff8,inset 0 -6px 10px #0008}
+.ring::after{content:"";position:absolute;inset:6%;border-radius:50%;background:#000;box-shadow:inset 0 4px 12px #000}
+.btn{position:relative;width:86%;aspect-ratio:1;border:0;padding:0;border-radius:50%;overflow:hidden;cursor:pointer;
+  background:radial-gradient(circle at 50% 38%,#ffd9a0 0,#ff6a4d 55%,#c8102e 100%);
+  box-shadow:inset 0 0 28px 6px rgba(0,0,0,.65),0 0 0 3px #000;transition:transform .08s,filter .08s}
+.btn img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none;mix-blend-mode:multiply;transform:scale(1.12);filter:contrast(1.08) saturate(1.1)}
+/* блиск скла */
+.btn::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse 60% 35% at 38% 14%,rgba(255,255,255,.5),transparent 70%),radial-gradient(circle,transparent 62%,rgba(0,0,0,.55) 100%)}
+.btn:active,.btn.hit{transform:scale(.955);filter:brightness(1.25)}
+.wave{position:absolute;inset:7%;border-radius:50%;border:4px solid #ffcf7a;pointer-events:none;animation:wave .55s ease-out forwards}
+@keyframes wave{to{transform:scale(1.45);opacity:0;border-width:1px}}
+.float{position:absolute;font:400 38px var(--comic);color:#fff;pointer-events:none;z-index:5;-webkit-text-stroke:2px #000;paint-order:stroke fill;
+  text-shadow:0 3px 0 var(--red);animation:fl .85s ease-out forwards}
+@keyframes fl{0%{transform:translate(-50%,0) scale(.6)}20%{transform:translate(-50%,-14px) scale(1.2)}100%{transform:translate(-50%,-110px) scale(.9);opacity:0}}
+
+/* ЕНЕРГІЯ */
+.energy{margin-bottom:14px;padding:12px 14px 14px}
+.energy .row{display:flex;justify-content:space-between;align-items:center;font-weight:700;font-size:14px;margin-bottom:9px}
+.energy .row span:first-child{display:flex;align-items:center;gap:6px}
+.bolt{width:18px;height:18px;filter:drop-shadow(0 0 6px #ffb02e)}
+.bar{height:16px;border-radius:9px;background:#000b;padding:2px;box-shadow:inset 0 2px 5px #000,0 1px 0 #ffffff22}
+.bar i{display:block;height:100%;width:100%;border-radius:7px;position:relative;overflow:hidden;
+  background:linear-gradient(180deg,#ff9a6a,var(--red2) 40%,#a30c25);box-shadow:0 0 14px rgba(255,74,74,.8);transition:width .18s}
+.bar i::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 22px,rgba(0,0,0,.35) 22px 24px)}
+.bar i::after{content:"";position:absolute;left:0;right:0;top:0;height:45%;background:linear-gradient(rgba(255,255,255,.55),transparent)}
+
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%) translateY(10px);z-index:9;padding:10px 18px;border-radius:14px;
+  background:#000d;border:1px solid var(--gold3);font-size:14px;opacity:0;transition:.25s;pointer-events:none}
+.toast.on{opacity:1;transform:translateX(-50%)}
+/* вкладки */
+.view{display:none;flex:1;min-height:0;flex-direction:column;position:relative;z-index:2}
+.view.on{display:flex}
+.pad{padding-top:14px;overflow-y:auto;gap:10px;-webkit-overflow-scrolling:touch}
+.pad h2{margin:0 0 4px;text-align:center;font:400 38px var(--comic);letter-spacing:1.5px;-webkit-text-stroke:2px #000;paint-order:stroke fill;text-shadow:0 3px 0 var(--red),0 8px 18px rgba(211,19,47,.7)}
+.card{display:flex;align-items:center;gap:12px;padding:13px 14px}
+.card .ic{font-size:30px;width:46px;height:46px;display:grid;place-items:center;border-radius:14px;background:#0008;box-shadow:inset 0 2px 6px #000;flex:none}
+.card .tx{flex:1;min-width:0}
+.card .tx b{display:block;font-size:15px}
+.card .tx small{color:var(--muted);font-size:12px}
+.tag{font-size:11px;font-weight:700;padding:5px 9px;border-radius:9px;background:#ffffff14;color:var(--muted)}
+.buy{border:0;border-radius:13px;padding:10px 12px;font:700 14px var(--ui);color:#2a1500;white-space:nowrap;cursor:pointer;
+  background:linear-gradient(180deg,var(--gold1),var(--gold2) 55%,#b87a24);box-shadow:0 3px 0 #6b430c,0 6px 14px rgba(232,166,74,.4),inset 0 1px 0 #fff9}
+.buy:active{transform:translateY(2px);box-shadow:0 1px 0 #6b430c}
+.buy.off{filter:grayscale(.85) brightness(.6)}
+.bal{text-align:center;font-weight:700;color:var(--gold1);margin-bottom:2px}
+.row2{display:flex;align-items:center;gap:12px;padding:10px 14px}
+.row2 .rk{width:30px;text-align:center;font:400 22px var(--comic)}
+.row2 .nm{flex:1;min-width:0;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row2 .sc{font-weight:700;color:var(--gold1);font-size:14px}
+.row2.me{background:linear-gradient(90deg,rgba(211,19,47,.45),transparent),var(--glass)}
+.pf{align-items:center;text-align:center;gap:6px}
+.pf .ava{width:96px;height:96px;font-size:40px;margin:8px 0 6px}
+.pf .un{font-size:20px;font-weight:700}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;margin-top:12px}
+.stat{padding:14px 8px;text-align:center}
+.stat span{font-size:26px}
+.stat b{display:block;font:400 30px var(--comic);margin-top:4px;letter-spacing:1px}
+.stat small{color:var(--muted);font-size:11px}
+.nav{display:flex;gap:2px;padding:6px;margin:6px 0 10px;position:relative;z-index:3}
+.nav button{flex:1;border:0;background:none;color:var(--muted);font:600 10.5px var(--ui);padding:7px 0 6px;border-radius:14px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer}
+.nav button i{font-style:normal;font-size:21px;filter:grayscale(.7)}
+.nav button.on{color:var(--gold1);background:linear-gradient(180deg,rgba(232,166,74,.28),rgba(232,166,74,.05));box-shadow:inset 0 1px 0 #fff3}
+.nav button.on i{filter:none;text-shadow:0 0 12px var(--gold2)}
+@media (max-height:640px){.score .n{font-size:44px}.rig{width:min(62vw,250px)}}
+@media (prefers-reduced-motion:reduce){.aura,.dot{animation:none}}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas>
+
+<section class="view on" id="v-home">
+<div class="top">
+  <div class="user panel">
+    <div class="ava" id="ava">?</div>
+    <div class="uinfo">
+      <div class="uname" id="uname">Гравець</div>
+      <div class="uid" id="uid">ID: —</div>
+      <div class="lvl"><i id="lvl"></i></div>
+    </div>
+  </div>
+  <div class="gems panel">
+    <svg viewBox="0 0 24 24"><path d="M12 2 3 9l9 13 9-13z" fill="#a98bff"/><path d="M12 2 3 9h18z" fill="#d9ccff"/><path d="M12 2 8 9l4 13 4-13z" fill="#7a55f0"/></svg>
+    <b id="gems">0</b>
+    <button class="plus" id="plus" aria-label="Додати">+</button>
+  </div>
+</div>
+
+<div class="menu">
+  <button class="panel" data-m="Бонус">🎁 Бонус<span class="dot"></span></button>
+  <button class="panel" data-m="Комбо">💠 Комбо<span class="dot"></span></button>
+  <button class="panel" data-m="Події">📦 Події</button>
+</div>
+
+<div class="score"><div class="n" id="score">0</div><div class="l">МОНЕТ · <span id="inc">+0/год</span></div></div>
+
+<div class="stage" id="stage">
+  <div class="rig" id="rig">
+    <div class="aura"></div>
+    <div class="ring"></div>
+    <button class="btn" id="tap" aria-label="Тапати"><img src="deadpool.png" alt="Дедпул"></button>
+  </div>
+</div>
+
+<div class="energy panel">
+  <div class="row">
+    <span><svg class="bolt" viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="#ffc533"/></svg>Енергія</span>
+    <span id="etext">500 / 500</span>
+  </div>
+  <div class="bar"><i id="ebar"></i></div>
+</div>
+</section>
+
+<section class="view pad" id="v-dev"></section>
+<section class="view pad" id="v-top"></section>
+<section class="view pad" id="v-events">
+  <h2>Івенти</h2>
+  <div class="card panel"><div class="ic">🎁</div><div class="tx"><b>Щоденна нагорода</b><small>Заходь щодня — бонус росте</small></div><span class="tag">Скоро</span></div>
+  <div class="card panel"><div class="ic">🏆</div><div class="tx"><b>Турнір тижня</b><small>Топ гравців отримає кристали</small></div><span class="tag">Скоро</span></div>
+  <div class="card panel"><div class="ic">🔥</div><div class="tx"><b>Подвійні монети</b><small>Тимчасовий бонус до тапів</small></div><span class="tag">Скоро</span></div>
+</section>
+<section class="view pad" id="v-profile"></section>
+
+<nav class="nav panel">
+  <button class="on" data-t="home"><i>🏠</i>Головна</button>
+  <button data-t="dev"><i>⚡</i>Розвиток</button>
+  <button data-t="top"><i>🏆</i>Лідерство</button>
+  <button data-t="events"><i>🎯</i>Івенти</button>
+  <button data-t="profile"><i>👤</i>Профіль</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const tg = window.Telegram && Telegram.WebApp;
+if (tg){ tg.ready(); tg.expand(); try{tg.setHeaderColor('#07040a');tg.setBackgroundColor('#07040a');}catch(e){} }
+
+/* --- користувач Telegram --- */
+const user = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) || {id:0,first_name:'Гість'};
+const $ = id => document.getElementById(id);
+$('uname').textContent = user.username ? '@'+user.username : [user.first_name,user.last_name].filter(Boolean).join(' ');
+$('uid').textContent = 'ID: '+user.id;
+if (user.photo_url){ $('ava').style.backgroundImage=`url(${user.photo_url})`; $('ava').textContent=''; }
+else $('ava').textContent=(user.first_name||'?')[0].toUpperCase();
+
+/* --- стан --- */
+const MAX_ENERGY=500, REGEN=1, TAP=1, KEY='dp_tap_'+user.id;
+let s={score:0,total:0,k:0,gems:0,energy:MAX_ENERGY,tapLvl:1,incLvl:0,frac:0,t:Date.now()};
+try{Object.assign(s,JSON.parse(localStorage.getItem(KEY))||{});}catch(e){}
+const away=Date.now()-s.t;
+s.energy=Math.min(MAX_ENERGY,s.energy+Math.floor((Date.now()-s.t)/1000)*REGEN);
+let dirty=false;
+const save=()=>{s.t=Date.now();dirty=true;try{localStorage.setItem(KEY,JSON.stringify(s));}catch(e){}};
+function render(){
+  $('score').textContent=s.score.toLocaleString('uk-UA');
+  $('gems').textContent=s.gems;
+  $('etext').textContent=s.energy+' / '+MAX_ENERGY;
+  $('ebar').style.width=(s.energy/MAX_ENERGY*100)+'%';
+  $('lvl').style.width=(s.total%1000)/10+'%';
+  $('inc').textContent='+'+fmt(perHour())+'/год';
+  drawViews();
+}
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');clearTimeout(toast.t);toast.t=setTimeout(()=>e.classList.remove('on'),1400);}
+
+/* --- іскри і вуглинки (canvas) --- */
+const cv=$('fx'),cx=cv.getContext('2d');let W,H,P=[];
+function size(){W=cv.width=innerWidth*devicePixelRatio;H=cv.height=innerHeight*devicePixelRatio;}
+size();addEventListener('resize',size);
+function ember(){return{x:Math.random()*W,y:H+10,vx:(Math.random()-.5)*.4*devicePixelRatio,vy:-(.4+Math.random()*1.1)*devicePixelRatio,r:(.6+Math.random()*1.8)*devicePixelRatio,life:1,d:.002+Math.random()*.004,amb:true}}
+function burst(x,y){for(let i=0;i<14;i++){const a=Math.random()*6.28,v=(2+Math.random()*5)*devicePixelRatio;
+  P.push({x:x*devicePixelRatio,y:y*devicePixelRatio,vx:Math.cos(a)*v,vy:Math.sin(a)*v-2*devicePixelRatio,r:(1.5+Math.random()*2.5)*devicePixelRatio,life:1,d:.035+Math.random()*.03})}}
+function loop(){
+  cx.clearRect(0,0,W,H);cx.globalCompositeOperation='lighter';
+  if(P.length<70&&Math.random()<.35)P.push(ember());
+  for(let i=P.length-1;i>=0;i--){const p=P[i];p.x+=p.vx;p.y+=p.vy;if(!p.amb)p.vy+=.18*devicePixelRatio;p.life-=p.d;
+    if(p.life<=0){P.splice(i,1);continue}
+    cx.globalAlpha=Math.max(0,p.life);cx.fillStyle=p.amb?'#ff6a3d':'#ffd27a';
+    cx.beginPath();cx.arc(p.x,p.y,p.r,0,6.28);cx.fill();}
+  requestAnimationFrame(loop);
+}
+if(!matchMedia('(prefers-reduced-motion:reduce)').matches)loop();
+
+/* --- тап --- */
+const rig=$('rig'),stage=$('stage');
+$('tap').addEventListener('pointerdown',e=>{
+  e.preventDefault();
+  if(s.energy<TAP){toast('Енергія закінчилась ⚡');return;}
+  s.energy-=1;addCoins(power());
+  if(tg&&tg.HapticFeedback)tg.HapticFeedback.impactOccurred('light');
+  // 3D-нахил у бік дотику
+  const r=rig.getBoundingClientRect(),dx=(e.clientX-r.left)/r.width-.5,dy=(e.clientY-r.top)/r.height-.5;
+  rig.style.transform=`rotateX(${-dy*22}deg) rotateY(${dx*22}deg)`;
+  clearTimeout(rig.t);rig.t=setTimeout(()=>rig.style.transform='',110);
+  // хвиля
+  const w=document.createElement('div');w.className='wave';rig.appendChild(w);setTimeout(()=>w.remove(),560);
+  // цифра
+  const sr=stage.getBoundingClientRect(),f=document.createElement('div');
+  f.className='float';f.textContent='+'+power();f.style.left=(e.clientX-sr.left)+'px';f.style.top=(e.clientY-sr.top-30)+'px';
+  stage.appendChild(f);setTimeout(()=>f.remove(),850);
+  burst(e.clientX,e.clientY);
+  const n=$('score');n.classList.remove('bump');void n.offsetWidth;n.classList.add('bump');
+  render();save();
+});
+setInterval(()=>{let ch=false;
+  if(s.energy<MAX_ENERGY){s.energy=Math.min(MAX_ENERGY,s.energy+REGEN);ch=true;}
+  if(perHour()){s.frac+=perHour()/3600;const w=Math.floor(s.frac);if(w){s.frac-=w;addCoins(w);}ch=true;}
+  if(ch){render();save();}},1000);
+
+document.querySelectorAll('.menu button').forEach(b=>b.onclick=()=>toast(b.dataset.m+' — скоро'));
+$('plus').onclick=()=>toast('Поповнення — скоро');
+
+/* --- економіка --- */
+const fmt=n=>Math.floor(n).toLocaleString('uk-UA');
+const power=()=>s.tapLvl, perHour=()=>s.incLvl*100;
+const tapCost=()=>Math.floor(100*Math.pow(1.9,s.tapLvl-1));
+const incCost=()=>Math.floor(250*Math.pow(1.8,s.incLvl));
+function addCoins(n){s.score+=n;s.total+=n;const k=Math.floor(s.total/1000);
+  if(k>s.k){s.gems+=k-s.k;s.k=k;toast('+1 кристал 💎');}}
+function buy(t){const c=t==='tap'?tapCost():incCost();
+  if(s.score<c){toast('Не вистачає монет');return;}
+  s.score-=c;t==='tap'?s.tapLvl++:s.incLvl++;
+  if(tg&&tg.HapticFeedback)tg.HapticFeedback.notificationOccurred('success');
+  toast('Покращено ✅');save();render();}
+
+/* --- вкладки --- */
+let tab='home';
+function go(t){tab=t;
+  document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+t));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+  drawViews();if(t==='top')loadBoard();if(tg&&tg.HapticFeedback)tg.HapticFeedback.selectionChanged();}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>go(b.dataset.t));
+
+/* --- сервер (база даних) --- */
+const API=window.API_URL||'';           // порожньо = той самий домен, що й сторінка
+const hdr={'Content-Type':'application/json','Authorization':'tma '+((tg&&tg.initData)||'')};
+async function api(p,o){const r=await fetch(API+p,Object.assign({headers:hdr},o));if(!r.ok)throw new Error(r.status);return r.json();}
+let board=null,boardState='idle';
+async function loadBoard(){boardState='load';drawViews();
+  try{await sync();board=await api('/api/leaderboard');boardState='ok';}catch(e){boardState='err';}
+  drawViews();}
+async function sync(){if(!dirty)return;dirty=false;
+  try{const r=await api('/api/sync',{method:'POST',body:JSON.stringify({score:s.score,total:s.total,gems:s.gems,k:s.k,tapLvl:s.tapLvl,incLvl:s.incLvl})});
+    if(!r.ok&&r.state){Object.assign(s,r.state);render();}}catch(e){dirty=true;}}
+const myName=user.username?'@'+user.username:(user.first_name||'Гість');
+const avaHTML=user.photo_url?'':(user.first_name||'?')[0].toUpperCase();
+const avaStyle=user.photo_url?`style="background-image:url(${user.photo_url})"`:'';
+
+function drawViews(){
+  if(tab==='dev'){
+    const a=s.score>=tapCost(),b=s.score>=incCost();
+    $('v-dev').innerHTML=`<h2>Розвиток</h2><div class="bal">🪙 ${fmt(s.score)}</div>
+    <div class="card panel"><div class="ic">👆</div><div class="tx"><b>Сила тапа · рів. ${s.tapLvl}</b>
+      <small>+${s.tapLvl} → +${s.tapLvl+1} за тап</small></div>
+      <button class="buy ${a?'':'off'}" onclick="buy('tap')">🪙 ${fmt(tapCost())}</button></div>
+    <div class="card panel"><div class="ic">⏱️</div><div class="tx"><b>Дохід за годину · рів. ${s.incLvl}</b>
+      <small>+${fmt(perHour())} → +${fmt(perHour()+100)} /год, працює і офлайн</small></div>
+      <button class="buy ${b?'':'off'}" onclick="buy('inc')">🪙 ${fmt(incCost())}</button></div>`;
+  }
+  if(tab==='top'){
+    const med=['🥇','🥈','🥉'],esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    let h='<h2>Лідерство</h2>';
+    if(boardState==='load'&&!board)h+='<div class="bal">Завантаження…</div>';
+    else if(boardState==='err'&&!board)h+='<div class="bal">Не вдалося завантажити топ. Спробуй пізніше.</div>';
+    else if(board){
+      h+=board.top.map((p,i)=>{const me=p.id===user.id;
+        return `<div class="row2 panel ${me?'me':''}"><div class="rk">${med[i]||i+1}</div>
+        <div class="nm">${esc(p.name)}${me?' (ти)':''}</div><div class="sc">🪙 ${fmt(p.total)}</div></div>`;}).join('');
+      if(board.me&&board.me.rank>board.top.length)
+        h+=`<div class="bal">…</div><div class="row2 panel me"><div class="rk">${board.me.rank}</div><div class="nm">${esc(myName)} (ти)</div><div class="sc">🪙 ${fmt(board.me.total)}</div></div>`;
+    }
+    $('v-top').innerHTML=h;
+  }
+  if(tab==='profile'){
+    $('v-profile').innerHTML=`<div class="pf card panel" style="flex-direction:column">
+      <div class="ava" ${avaStyle}>${avaHTML}</div><div class="un">${myName}</div>
+      <div class="uid">ID: ${user.id}</div></div>
+      <div class="stats"><div class="stat panel"><span>💎</span><b>${fmt(s.gems)}</b><small>КРИСТАЛИ</small></div>
+      <div class="stat panel"><span>🪙</span><b>${fmt(s.total)}</b><small>ПОТАПАНО ЗА ВЕСЬ ЧАС</small></div>
+      <div class="stat panel"><span>👆</span><b>+${s.tapLvl}</b><small>ЗА ТАП</small></div>
+      <div class="stat panel"><span>⏱️</span><b>${fmt(perHour())}</b><small>ДОХІД / ГОД</small></div></div>`;
+  }
+}
+
+/* --- офлайн-дохід (макс. 3 год) --- */
+function applyOffline(ms){const off=Math.min(ms,3*3600e3)/3600e3*perHour();
+  if(off>=1){addCoins(Math.floor(off));setTimeout(()=>toast('Офлайн-дохід: +'+fmt(off)+' 🪙'),600);}}
+render();
+(async()=>{
+  try{const r=await api('/api/me');                  // прогрес береться з бази
+    const {score,total,gems,k,tapLvl,incLvl}=r.state;Object.assign(s,{score,total,gems,k,tapLvl,incLvl});
+    applyOffline(Date.now()-r.state.t);
+  }catch(e){applyOffline(away);}                      // сервер недоступний — працюємо локально
+  dirty=true;render();
+  setInterval(sync,5000);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)sync();});
+})();
+</script>
+</body>
+</html>
